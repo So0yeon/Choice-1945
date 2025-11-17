@@ -324,7 +324,7 @@
                 image: "images/16_activist_3.png", // images/16_activist_3.png
                 education: "일제는 '밀정'을 심어 독립운동가들을 이간질하고 체포했습니다. 동지에 대한 불신은 독립운동 조직에 큰 위협이 되었습니다.",
                 choices: [
-                    { text: "끝까지 동지를 믿는다.", next: 'act2_activist_4_school', stats: { danger: +1, conviction: +2 } },
+                    { text: "끝까지 동지를 믿는다.", next: 'act2_activist_4_school', stats: { danger: +1, conviction: +2, honor: +1 } },
                     { text: "안전을 위해 그를 조직에서 배제한다.", next: 'act2_activist_4_school', stats: { conviction: -1, honor: -1, danger: -1 } }
                 ]
             },
@@ -333,7 +333,7 @@
                 image: "images/17_activist_4.png", // images/17_activist_4.png
                 education: "신흥무관학교는 만주에 세워진 독립군 양성 학교로, 수많은 독립군 지휘관을 배출한 항일 무장 투쟁의 요람이었습니다.",
                 choices: [
-                    { text: "가진 돈을 모두 털어주고, 믿을 만한 동료를 소개해준다.", next: 'act3_intro', stats: { money: -2, conviction: +3, danger: +2 } },
+                    { text: "가진 돈을 모두 털어주고, 믿을 만한 동료를 소개해준다.", next: 'act3_intro', stats: { money: -2, conviction: +3, danger: +2, honor: +1 } },
                     { text: "'국내 활동만으로도 벅차다.' 정중히 거절한다.", next: 'act3_intro', stats: { money: +1, conviction: -2, danger: -1 } }
                 ]
             },
@@ -344,7 +344,7 @@
                 education: "산미증식계획(1920~34년) 이후, 일제는 쌀을 대량으로 수탈해갔습니다. 1930년대 후반 전시 체제가 되자 수탈은 더욱 심해져 조선 농민들은 굶주림에 시달렸습니다.",
                 choices: [
                     { text: "못 본 척 한다. 내 일이 아니다.", next: 'act2_merchant_2_taehyung', stats: { conviction: -2, danger: -1 } },
-                    { text: "몰래 농부에게 경고하고 쌀을 숨기도록 돕는다.", next: 'act2_merchant_2_taehyung', stats: { conviction: +2, danger: +1 } }
+                    { text: "몰래 농부에게 경고하고 쌀을 숨기도록 돕는다.", next: 'act2_merchant_2_taehyung', stats: { conviction: +2, danger: +1, honor: +1 } }
                 ]
             },
             'act2_merchant_2_taehyung': {
@@ -352,8 +352,8 @@
                 image: "images/19_merchant_2.png", // images/19_merchant_2.png
                 education: "태형 제도(1912년)는 조선인에게만 적용된 야만적인 형벌로, 1910년대 무단 통치의 상징이었으나 1920년 폐지되었습니다. (이 게임에서는 시대적 압박을 상징합니다.)",
                 choices: [
-                    { text: "'내가 봤다. 그는 훔치지 않았다.'고 증언한다.", next: 'act2_merchant_3_oldwoman', stats: { conviction: +2, honor: +1, danger: +2 } },
-                    { text: "농부의 가족에게 몰래 돈을 쥐여준다.", next: 'act2_merchant_3_oldwoman', stats: { money: -1, conviction: +1 } },
+                    { text: "'내가 봤다. 그는 훔치지 않았다.'고 증언한다.", next: 'act2_merchant_3_oldwoman', stats: { conviction: +2, honor: +2, danger: +2 } },
+                    { text: "농부의 가족에게 몰래 돈을 쥐여준다.", next: 'act2_merchant_3_oldwoman', stats: { money: -1, conviction: +1, honor: +1 } },
                     { text: "무서워서 가게 안으로 숨는다.", next: 'act2_merchant_3_oldwoman', stats: { danger: -1, conviction: -1 } }
                 ]
             },
@@ -371,7 +371,7 @@
                 image: "images/21_merchant_4.png", // images/21_merchant_4.png
                 education: "토지 조사 사업(1910~18년)은 '토지 소유권 확립'을 명분으로 했으나, 실제로는 조선 농민의 토지를 빼앗아 동양척식주식회사와 일본인 지주에게 넘기는 수탈 정책이었습니다.",
                 choices: [
-                    { text: "'어려울 때 서로 도와야지.' 월급의 대부분을 빌려준다.", next: 'act3_intro', stats: { money: -2, conviction: +1 } },
+                    { text: "'어려울 때 서로 도와야지.' 월급의 대부분을 빌려준다.", next: 'act3_intro', stats: { money: -2, conviction: +1, honor: +1 } },
                     // [!!수정!!] 쉼표가 두 개(,,) 들어간 문법 오류 수정
                     { text: "'우리 가족도 먹고 살기 힘들다.' 모른 척 돌려보낸다.", next: 'act3_intro', stats: { conviction: -2, money: +2 } }
                 ]
@@ -410,7 +410,7 @@
                 image: "images/25_student_4.png", // images/25_student_4.png
                 education: "일본 유학생 중 일부는 '학도병'으로 강제 징집되기도 했지만, 일부는 임시정부와 연계하여 정보 수집 등 비밀스러운 독립운동에 가담하기도 했습니다.",
                 choices: [
-                    { text: "'조국을 위해.' 위험을 무릅쓰고 정보를 수집한다.", next: 'act3_intro', stats: { conviction: +2, danger: +2 } },
+                    { text: "'조국을 위해.' 위험을 무릅쓰고 정보를 수집한다.", next: 'act3_intro', stats: { conviction: +2, danger: +2, honor: +1 } },
                     { text: "'나는 학생이다.' 편지를 불태우고 학업에만 전념한다.", next: 'act3_intro', stats: { danger: -2, conviction: -2 } }
                 ]
             },
@@ -430,7 +430,7 @@
                 choices: [
                     { text: "'나는 대일본제국의 신민이다...' 목소리 높여 외운다.", next: 'act3_scene2_shrine', stats: { conviction: -2, danger: -1, honor: -1 } },
                     { text: "입만 벙긋거리며 외우는 척한다.", next: 'act3_scene2_shrine', stats: { conviction: -1, danger: +1 } },
-                    { text: "'외울 수 없다!' 침묵으로 저항하다 구타당한다.", next: 'act3_scene2_shrine', stats: { conviction: +3, danger: +2 } }
+                    { text: "'외울 수 없다!' 침묵으로 저항하다 구타당한다.", next: 'act3_scene2_shrine', stats: { conviction: +3, danger: +2, honor: +1 } }
                 ]
             },
             'act3_scene2_shrine': {
@@ -459,7 +459,7 @@
                 education: "국가총동원법(1938년) 이후, 일제는 인적·물적 자원을 총동원했습니다. 수많은 조선 청년이 강제로 전쟁터나 탄광으로 끌려가 희생되었습니다.",
                 choices: [
                     { text: "가족과 함께 깊은 산골로 피신한다.", next: 'calculate_ending', stats: { danger: +1, conviction: -1 } },
-                    { text: "소집에 불응하고, 마지막 저항을 준비한다.", next: 'calculate_ending', stats: { danger: +5, conviction: +5 } },
+                    { text: "소집에 불응하고, 마지막 저항을 준비한다.", next: 'calculate_ending', stats: { danger: +3, conviction: +3, honor: +1 } },
                     { text: "시대를 받아들이고, 순응한다.", next: 'calculate_ending', stats: { danger: -1, conviction: -5 } }
                 ]
             },
@@ -722,21 +722,18 @@
             console.log("엔딩 계산 시작:", playerStats, "직업:", playerJob); // 디버깅용 로그
 
             // [공통 엔딩 1] 사라진 이름
-            // (수정) 기준값 조정: 신념 10 이상, 위험 15 이상, 명예 5 이하
             if (conviction >= 25 && danger >= 25 && honor <= 5) { 
                 renderScene('ending_missing');
                 return;
             }
 
             // [공통 엔딩 2] 빛의 이름으로
-            // (수정) 기준값 조정: 신념 15 이상, 위험 15 이상, 명예 6 이상
             if (conviction >= 25 && danger >= 25 && honor >= 6) {
                 renderScene('ending_light');
                 return;
             }
 
             // [공통 엔딩 3] 침묵 (신념이 매우 낮음)
-            // (수정) 기준값 조정: 신념 -5 이하
             if (conviction <= -10) {
                 renderScene('ending_silence');
                 return;
