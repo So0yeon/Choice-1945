@@ -1,0 +1,806 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>〈1945, 나의 선택〉</title>
+    <!-- Tailwind CSS CDN --><script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts (Noto Serif & Noto Sans) --><link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;700&family=Noto+Serif+KR:wght@400;600&display=swap" rel="stylesheet">
+    
+    <style>
+        /* Noto Serif는 이야기 본문에, Noto Sans는 UI 요소에 적용합니다. */
+        body {
+            font-family: 'Noto Sans KR', sans-serif;
+        }
+        #scene-text, .font-serif {
+            font-family: 'Noto Serif KR', serif;
+        }
+        
+        /* 스탯바 아이템 스타일 */
+        .stat-item {
+            @apply text-sm md:text-base bg-gray-700 px-3 py-1 rounded-full shadow;
+        }
+
+        /* 장면 전환 시 페이드인 효과 */
+        .scene-fade-in {
+            animation: fadeIn 0.8s ease-in-out;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* [추가] 점수 알림 팝업 */
+        #stat-popup {
+            transition: opacity 0.5s, transform 0.5s;
+        }
+    </style>
+</head>
+<body class="bg-gray-900 text-gray-200">
+
+    <!-- [추가] 게임 안내 화면 (Z-index: 40) -->
+    <div id="tutorial-screen" class="fixed inset-0 bg-black bg-opacity-95 flex flex-col items-center justify-center z-40 p-4 transition-opacity duration-500">
+        <div class="bg-white text-gray-900 p-8 rounded-lg shadow-2xl text-center max-w-md w-full">
+            <h1 class="text-3xl font-bold font-serif mb-4">게임 안내</h1>
+            <p class="text-left mb-4">
+                이 게임은 일제강점기를 살아가는 조선인 청년의 삶을 선택하는 이야기입니다.<br><br>
+                여러분의 모든 선택은 4가지 점수에 영향을 줍니다:
+            </p>
+            <ul class="text-left list-disc list-inside mb-6">
+                <li><b>💰 돈:</b> 생계와 활동을 위한 자산</li>
+                <li><b>🕊️ 신념:</b> 민족의식과 내면의 다짐</li>
+                <li><b>🔥 위험:</b> 일제에 의한 감시와 체포 가능성</li>
+                <li><b>🎖️ 명예:</b> 동포들 사이의 존경과 자긍심</li>
+            </ul>
+            <p class="text-left mb-6">
+                여러분이 누적한 점수에 따라, 1945년 광복의 순간에 11가지의 다른 엔딩을 맞이하게 됩니다.
+            </p>
+            <button id="show-start-screen-btn" class="w-full bg-indigo-600 text-white p-3 rounded-lg font-bold hover:bg-indigo-700 transition">
+                나의 이름은..
+            </button>
+        </div>
+    </div>
+
+    <!-- 게임 시작 화면 (이름 입력) (Z-index: 30) -->
+    <div id="start-screen" class="fixed inset-0 bg-black bg-opacity-90 flex flex-col items-center justify-center z-30 transition-opacity duration-500 p-4 opacity-0" style="opacity: 0; display: none;">
+        <div class="bg-white text-gray-900 p-8 rounded-lg shadow-2xl text-center max-w-sm w-full">
+            <h1 class="text-3xl font-bold font-serif mb-3">일제강점기 인생게임<br>[1945, 나의 선택]</h1>
+            <p class="text-xs text-gray-500 mb-6">
+                [초등] 사회(김정인)⑤<br>2. 사회의 새로운 변화와 오늘날의 우리│118~121쪽
+            </p>
+            <p class="mb-6">이 혼란의 시대, 당신의 이름은 무엇입니까?</p>
+            <input type="text" id="player-name-input" class="w-full p-3 border border-gray-300 rounded-lg text-center" placeholder="예: 홍길동" value="">
+            <button id="start-game-btn" class="w-full bg-indigo-600 text-white p-3 rounded-lg mt-4 font-bold hover:bg-indigo-700 transition">
+                1910년대로...
+            </button>
+        </div>
+        <footer class="text-center text-gray-400 text-xs mt-4">
+            관련 문의: wptnwptn@sen.go.kr
+        </footer>
+    </div>
+
+    <!-- 메인 게임 컨테이너 -->
+    <div class="container max-w-3xl mx-auto p-4 md:p-8">
+        
+        <h1 class="text-3xl md:text-4xl font-bold text-center mb-6 font-serif">〈1945, 나의 선택〉</h1>
+
+        <!-- 능력치 바 (Sticky) -->
+        <div id="stats-bar" class="sticky top-4 z-20 bg-gray-800 bg-opacity-90 backdrop-blur-sm p-3 rounded-xl shadow-lg mb-6">
+            <div class="flex flex-wrap justify-center gap-2 md:gap-3">
+                <!-- JavaScript로 능력치 채워넣기 -->
+            </div>
+        </div>
+
+        <!-- 게임 화면 -->
+        <div id="game-window" class="bg-white text-gray-900 rounded-lg shadow-2xl overflow-hidden opacity-0 transition-opacity duration-500">
+            
+            <!-- [수정] h-48 md:h-64 -> aspect-square로 변경하여 정방형으로 만듭니다. -->
+            <div class="w-full aspect-square bg-gray-700">
+                <img id="scene-image" src="images/01_intro.png" 
+                     alt="현재 장면 이미지" class="w-full h-full object-cover"
+                     onerror="this.src='https://placehold.co/600x600/6b7280/ffffff?text=Image+Error'">
+            </div>
+            
+            <div class="p-6 md:p-8">
+                <p id="scene-text" class="text-lg md:text-xl leading-relaxed mb-6 font-serif">
+                    게임을 불러오는 중입니다...
+                </p>
+
+                <div id="education-box" class="mb-6 bg-gray-50 border-l-4 border-indigo-500 p-4 rounded-r-lg shadow-inner">
+                    <h3 class="font-bold text-lg mb-2 text-indigo-700">🎓 역사 지식 더하기</h3>
+                    <p id="education-text" class="text-sm md:text-base text-gray-700">
+                        <!-- JavaScript로 내용 채워넣기 -->
+                    </p>
+                </div>
+
+                <div id="choices-container" class="mt-6">
+                    <!-- JavaScript로 선택지 버튼 생성 -->
+                </div>
+
+                <div id="ending-footer" class="hidden mt-8 pt-4 border-t border-gray-200 text-center">
+                    <p class="text-xs text-gray-500 mb-2">
+                        [초등] 사회(김정인)⑤<br>2. 사회의 새로운 변화와 오늘날의 우리│118~121쪽
+                    </p>
+                    <p class="text-xs text-gray-400">
+                        관련 문의: wptnwptn@sen.go.kr
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- [추가] 점수 알림 팝업 (Z-index: 50) -->
+    <div id="stat-popup" class="fixed bottom-10 left-1/2 transform -translate-x-1/2 bg-gray-800 text-white px-6 py-3 rounded-lg shadow-lg z-50 opacity-0" style="display: none;">
+        <!-- JavaScript로 내용 채워넣기 -->
+    </div>
+
+
+    
+    <script>
+        // --- 1. 게임 상태 변수 ---
+        let playerStats = {
+            playerName: "",
+            money: 0,
+            conviction: 0,      // 신념
+            danger: 0,          // 위험
+            honor: 0,           // 명예
+        };
+        let currentScene = 'intro'; // 시작 장면 ID
+        let playerJob = ''; // [!!수정!!] 2막에서 선택한 직업을 저장할 변수
+
+        // --- 2. DOM 요소 캐시 ---
+        const tutorialScreen = document.getElementById('tutorial-screen'); // [추가]
+        const showStartScreenBtn = document.getElementById('show-start-screen-btn'); // [추가]
+        const startScreen = document.getElementById('start-screen');
+        const playerNameInput = document.getElementById('player-name-input');
+        const startGameBtn = document.getElementById('start-game-btn');
+        const gameWindow = document.getElementById('game-window');
+        const statsBar = document.getElementById('stats-bar').querySelector('div');
+        const sceneText = document.getElementById('scene-text');
+        const educationBox = document.getElementById('education-box');
+        const educationText = document.getElementById('education-text');
+        const choicesContainer = document.getElementById('choices-container');
+        const sceneImage = document.getElementById('scene-image');
+        const endingFooter = document.getElementById('ending-footer');
+        const statPopup = document.getElementById('stat-popup'); // [추가]
+
+        // --- 3. 게임 데이터 (시나리오) ---
+        // [!!대규모 수정!!] 확장된 시나리오 및 능력치 반영
+        // [!!버그 수정!!] 누락된 엔딩 데이터 추가
+        const gameData = {
+            'intro': {
+                text: "1910년대, 조선.<br><br>거리엔 일본 순사들의 발소리와 함께, 학교에선 일본어가 울려 퍼진다.<br><br>{playerName}은(는) 이제 막 열다섯 살이 된 조선의 청년이다.<br><br>이 혼란의 시대, 어떤 삶을 살 것인가?",
+                image: "images/01_intro.png", // images/01_intro.png
+                education: "1910년대는 일제가 헌병경찰을 앞세워 조선을 강압적으로 다스리던 ‘무단통치’의 시대였습니다. 조선인의 자유와 권리는 심하게 제한되었습니다.",
+                choices: [
+                    { text: "다음으로", next: 'initial_choice' }
+                ]
+            },
+            'initial_choice': {
+                text: "당신의 '출신 배경'을 선택하십시오.",
+                image: "images/02_initial_choice.png", // images/02_initial_choice.png
+                education: "당시 조선 사회는 신분제가 철폐되었음에도 여전히 전통적인 배경과 경제력에 따라 삶의 모습이 크게 달랐습니다.",
+                isInitial: true,
+                choices: [
+                    { text: "A. 몰락한 양반가 자식: 자존심이 강하며 배움에 힘씁니다.", next: 'act1_intro', stats: { money: 3, conviction: 1, honor: 1 } },
+                    { text: "B. 가난한 농민의 자녀: 근면하고 현실적입니다.", next: 'act1_intro', stats: { money: 1, conviction: 2 } },
+                    { text: "C. 일본 상점 점원 집안: 타협적이며 안정을 꿈꿉니다.", next: 'act1_intro', stats: { money: 5 } },
+                    { text: "D. 독립운동가의 자녀: 위험을 수반하며 정의롭습니다.", next: 'act1_intro', stats: { money: 3, conviction: 3, danger: 2 } }
+                ]
+            },
+            // --- 제 1막: 학교 (5개 상황) ---
+            'act1_intro': {
+                text: "제 1막. 학교의 기억<br><br>15살이 되어 보통학교에 입학했다. 하지만 학교의 풍경은 낯설기만 하다.",
+                image: "images/03_act1_intro.png", // images/03_act1_intro.png
+                education: "일제는 1911년 '조선교육령'을 공포하여 식민 통치에 순응하는 일본어 중심의 교육을 시작했습니다.",
+                choices: [
+                    { text: "다음으로", next: 'act1_scene1_gate' }
+                ]
+            },
+            'act1_scene1_gate': {
+                text: "학교 교문. 제복을 입고 칼을 찬 교사가 학생들을 노려보고 있다. 늦잠을 자서 허둥지둥 뛰어왔다.",
+                image: "images/04_act1_gate.png", // images/04_act1_gate.png
+                education: "일제는 1910년대 '무단 통치' 시기, 교사들에게까지 제복을 입히고 칼을 차게 하여 학생들에게 공포심을 심어주었습니다.",
+                choices: [
+                    { text: "교사에게 90도로 허리 숙여 사과한다.", next: 'act1_scene2_name', stats: { danger: -1, conviction: -1 } },
+                    { text: "들키지 않게 뒷문으로 숨어 들어간다.", next: 'act1_scene2_name', stats: { danger: +1 } },
+                    { text: "당당하게 걷다 붙잡힌다. '왜 늦었나!'", next: 'act1_scene2_name', stats: { conviction: +1, danger: +2 } }
+                ]
+            },
+            'act1_scene2_name': {
+                text: "수업 시간, 선생님이 {playerName}을(를) 지목하며 말한다.<br><br>'이제부터 조선 이름은 사용 금지다. 창씨개명한 너의 일본 이름으로 대답해라.'",
+                image: "images/05_act1_name.png", // images/05_act1_name.png
+                education: "창씨개명 (1939년 말~1940년) : 일제는 조선인에게 일본식 성과 이름을 강요했습니다. 따르지 않으면 학교 입학, 취직, 배급 등에서 불이익을 주었습니다.",
+                choices: [
+                    { text: "급조한 일본식 이름으로 대답한다.", next: 'act1_scene3_textbook', stats: { conviction: -1, danger: -1 } },
+                    { text: "“제 이름은 {playerName}입니다.” 조선 이름을 고집한다.", next: 'act1_scene3_textbook', stats: { conviction: +1, danger: +2 } }
+                ]
+            },
+            'act1_scene3_textbook': {
+                text: "국어 시간. 교과서를 폈지만, 온통 일본어로 쓰인 국어 교과서다. 교실 벽에는 일본 국기가 걸려있다. '하나', '둘', '셋'… 조선의 말은 잊혀가고 있다.",
+                image: "images/06_act1_textbook.png", // images/06_act1_textbook.png
+                education: "일제는 조선어 교육을 점차 축소하다가 1938년에는 조선어 과목을 폐지하고, 일본어를 '국어'로 사용하도록 강요했습니다.",
+                choices: [
+                    { text: "어쩔 수 없다. 일본어 교과서를 소리 내어 읽는다.", next: 'act1_scene4_corridor', stats: { conviction: -1, danger: -1 } },
+                    { text: "책상 밑에 몰래 '한글'을 끄적여본다.", next: 'act1_scene4_corridor', stats: { conviction: +1, danger: +1 } },
+                    { text: "'이건 우리말이 아니잖아요.' 작게 읊조리다 교사에게 걸린다.", next: 'act1_scene4_corridor', stats: { conviction: +2, danger: +2 } }
+                ]
+            },
+            'act1_scene4_corridor': {
+                text: "복도에서 친구와 무심코 조선말로 대화했다. 지나가던 일본인 상급생이 멱살을 잡는다. '조센징이 감히 학교에서 조선말을 써?'",
+                image: "images/07_act1_corridor.png", // images/07_act1_corridor.png
+                education: "학교 내 조선어 사용 금지는 학생들 사이의 감시와 폭력으로 이어지기도 했습니다. 이는 민족적 차별의 일상이었습니다.",
+                choices: [
+                    { text: "'すみません。' 바로 일본어로 사과하고 도망친다.", next: 'act1_scene5_paper', stats: { conviction: -1, danger: -1 } },
+                    { text: "맞서 노려본다. '우리말로 말하는 게 죄인가!'", next: 'act1_scene5_paper', stats: { conviction: +2, danger: +2 } },
+                    { text: "친구를 버리고 혼자 도망친다.", next: 'act1_scene5_paper', stats: { conviction: -2, honor: -1 } }
+                ]
+            },
+            'act1_scene5_paper': {
+                text: "쉬는 시간, 책상 밑을 보니 누군가 숨겨둔 '독립신문'이 있습니다. 가슴이 두근거립니다.",
+                image: "images/08_act1_paper.png", // images/08_act1_paper.png
+                education: "일제는 언론을 엄격히 통제했습니다. '독립신문'과 같은 항일 간행물은 비밀리에 제작되고 배포되었으며, 소지하는 것만으로도 큰 위험에 처할 수 있었습니다.",
+                choices: [
+                    { text: "위험하다. 아무 일 없는 척 덮어둔다.", next: 'act2_intro', stats: { danger: -1 } },
+                    { text: "친한 친구들과 몰래 돌려본다.", next: 'act2_intro', stats: { conviction: +2, danger: +2 } },
+                    { text: "선생님께 가져다주어 처벌을 피한다.", next: 'act2_intro', stats: { danger: -2, conviction: -2 } }
+                ]
+            },
+            // --- 제 2막: 어른의 세계 (4개 루트, 각 4개 상황) ---
+            'act2_intro': {
+                text: "제 2막. 어른의 세계<br><br>학교를 졸업하고, {playerName}은(는) 삶의 기로에 섰다. 이 시대를 어떻게 살아갈 것인가?",
+                image: "images/09_act2_intro.png", // images/09_act2_intro.png
+                education: "1930~40년대 조선인 청년들은 극심한 취업난과 차별 속에서 자신의 길을 선택해야 했습니다. 생존을 위한 길, 신념을 위한 길 등 다양한 삶의 모습이 나타났습니다.",
+                choices: [
+                    { text: "기자: 일제의 검열을 피해 진실을 밝힐 것인가?", next: 'act2_journalist_1' },
+                    { text: "독립운동가: 위험을 무릅쓰고 용기를 펼칠 것인가?", next: 'act2_activist_1' },
+                    { text: "상점 점원: 생존을 뒤로 하고 양심을 지킬 것인가?", next: 'act2_merchant_1' },
+                    { text: "유학생: 조국을 위해 나의 꿈을 희생할 수 있나?", next: 'act2_student_1' }
+                ]
+            },
+            // 2막: 기자 루트
+            'act2_journalist_1': {
+                text: "신문사 기자가 되었다. 하지만 편집장이 일본의 탄압 소식을 다룬 {playerName}의 기사를 빼라고 한다.",
+                image: "images/10_journalist_1.png", // images/10_journalist_1.png
+                education: "문화 통치기(1920년대)에 잠시 허용되었던 조선일보, 동아일보 등도 1930년대 후반이 되자 강력한 검열을 받았고, 결국 1940년 강제 폐간되었습니다.",
+                choices: [
+                    { text: "먹고 살아야 하니 명령에 따른다.", next: 'act2_journalist_2_gwangju', stats: { honor: -1, danger: -2 } },
+                    { text: "검열을 피해 기사를 몰래 싣는다.", next: 'act2_journalist_2_gwangju', stats: { honor: +2, danger: +3 } }
+                ]
+            },
+            'act2_journalist_2_gwangju': {
+                text: "작년(1929년)에 일어난 광주 학생 항일 운동의 1주년이다. 동료 기자가 '아직 끝나지 않았다'며 작은 추모 기사라도 내보내자고 한다.",
+                image: "images/11_journalist_2.png", // images/11_journalist_2.png
+                education: "광주 학생 항일 운동(1929년)은 3.1 운동 이후 가장 큰 규모의 항일 민족 운동으로, 전국적인 학생 시위로 번졌습니다.",
+                choices: [
+                    { text: "편집장 몰래 추모의 뜻만 담은 단평을 싣는다.", next: 'act2_journalist_3_arrest', stats: { honor: +1, danger: +1 } },
+                    { text: "'잡혀가도 좋다.' 학생들의 용기를 기리는 기사를 쓴다.", next: 'act2_journalist_3_arrest', stats: { honor: +2, conviction: +2, danger: +3 } },
+                    { text: "동료를 말린다. '신문사가 먼저다.'", next: 'act2_journalist_3_arrest', stats: { danger: -1, conviction: -2 } }
+                ]
+            },
+            'act2_journalist_3_arrest': {
+                text: "동료 기자가 항일 기사 작성 혐의로 체포된다. 신문사는 폐간 위기에 몰렸다.",
+                image: "images/12_journalist_3.png", // images/12_journalist_3.png
+                education: "많은 언론인들이 일제의 탄압으로 옥고를 치렀습니다. 신문사 폐간은 언론인들에게 생계와 신념의 터전을 동시에 잃는 고통이었습니다.",
+                choices: [
+                    { text: "그를 감싸며 끝까지 함께 싸운다.", next: 'act2_journalist_4_language', stats: { conviction: +2, danger: +2 } },
+                    { text: "먹여살릴 가족이 있는데.. 침묵하고 남는다.", next: 'act2_journalist_4_language', stats: { danger: -2, conviction: -2, honor: -1 } }
+                ]
+            },
+            'act2_journalist_4_language': {
+                text: "친하게 지내던 학자가 조선어학회 활동으로 체포되었다. 그가 '우리말 사전을 만들던 원고'를 당신에게 맡겼었다. 순사들이 신문사를 샅샅이 뒤지고 있다.",
+                image: "images/13_journalist_4.png", // images/13_journalist_4.png
+                education: "조선어학회 사건(1942년) : 일제는 한글을 연구하던 학자들을 '치안유지법' 위반으로 체포하고 고문했습니다. 민족의 말을 지키려던 거대한 노력이었습니다.",
+                choices: [
+                    { text: "원고를 불태워 증거를 없앤다.", next: 'act3_intro', stats: { danger: -1, conviction: -2, honor: -1 } },
+                    { text: "원고를 땅에 묻고, 반드시 되찾으리라 다짐한다.", next: 'act3_intro', stats: { conviction: +2, danger: +1 } },
+                    { text: "원고를 넘기고, 신문사의 안전을 보장받는다.", next: 'act3_intro', stats: { conviction: -3, danger: -2 } }
+                ]
+            },
+            // 2막: 독립운동가 루트
+            'act2_activist_1': {
+                text: "비밀 회합에 참여했다. 대한민국 임시정부에 보낼 자금이 부족하다는 소식을 들었다.",
+                image: "images/14_activist_1.png", // images/14_activist_1.png
+                education: "대한민국 임시정부는 상하이에 수립되어 항일 운동의 중심 역할을 했습니다. 국내외 동포들은 위험을 무릅쓰고 독립 자금을 모아 임시정부를 지원했습니다.",
+                choices: [
+                    { text: "집안의 재산을 몰래 팔아 자금을 댄다.", next: 'act2_activist_2_hanin', stats: { money: -2, danger: +1, conviction: +3, honor: +1 } },
+                    { text: "너무 위험하다. 다음을 기약하며 거절한다.", next: 'act2_activist_2_hanin', stats: { money: +1, conviction: -1, danger: -1 } }
+                ]
+            },
+            'act2_activist_2_hanin': {
+                text: "상하이에서 윤봉길 의사(한인애국단)의 의거 소식이 들려왔다. 동지들의 사기가 충천했다. 하지만 일제의 감시도 그만큼 심해졌다.",
+                image: "images/15_activist_2.png", // images/15_activist_2.png
+                education: "한인애국단은 김구 선생이 조직한 단체로, 이봉창, 윤봉길 의사의 의거는 전 세계에 조선의 독립 의지를 알렸습니다.",
+                choices: [
+                    { text: "'지금이 기회다.' 우리도 의거를 준비하자고 동지들을 독려한다.", next: 'act2_activist_3_spy', stats: { danger: +3, conviction: +3, honor: +1 } },
+                    { text: "'숨을 죽여야 한다.' 당분간 모든 활동을 중단하고 몸을 숨긴다.", next: 'act2_activist_3_spy', stats: { danger: -1, conviction: -2, honor: -1 } }
+                ]
+            },
+            'act2_activist_3_spy': {
+                text: "함께 활동하던 동지 중 한 명이 밀고자(동지의 정보를 일제에게 몰래 넘긴 배신자)로 의심받고 있다. 분위기가 흉흉하다.",
+                image: "images/16_activist_3.png", // images/16_activist_3.png
+                education: "일제는 '밀정'을 심어 독립운동가들을 이간질하고 체포했습니다. 동지에 대한 불신은 독립운동 조직에 큰 위협이 되었습니다.",
+                choices: [
+                    { text: "끝까지 동지를 믿는다.", next: 'act2_activist_4_school', stats: { danger: +1, conviction: +2 } },
+                    { text: "안전을 위해 그를 조직에서 배제한다.", next: 'act2_activist_4_school', stats: { conviction: -1, honor: -1, danger: -1 } }
+                ]
+            },
+            'act2_activist_4_school': {
+                text: "만주에서 신흥무관학교 출신의 동지가 비밀리에 찾아왔다. 그는 무장 투쟁을 위한 군자금과 동료의 합류를 요청한다.",
+                image: "images/17_activist_4.png", // images/17_activist_4.png
+                education: "신흥무관학교는 만주에 세워진 독립군 양성 학교로, 수많은 독립군 지휘관을 배출한 항일 무장 투쟁의 요람이었습니다.",
+                choices: [
+                    { text: "가진 돈을 모두 털어주고, 믿을 만한 동료를 소개해준다.", next: 'act3_intro', stats: { money: -2, conviction: +3, danger: +2 } },
+                    { text: "'국내 활동만으로도 벅차다.' 정중히 거절한다.", next: 'act3_intro', stats: { money: +1, conviction: -2, danger: -1 } }
+                ]
+            },
+            // 2막: 상점 점원 루트
+            'act2_merchant_1': {
+                text: "일본인이 운영하는 상점의 점원이 되었다. 어느 날, 일본 상사가 조선 농부들의 쌀을 헐값에 강제로 사들이는 것을 목격했다.",
+                image: "images/18_merchant_1.png", // images/18_merchant_1.png
+                education: "산미증식계획(1920~34년) 이후, 일제는 쌀을 대량으로 수탈해갔습니다. 1930년대 후반 전시 체제가 되자 수탈은 더욱 심해져 조선 농민들은 굶주림에 시달렸습니다.",
+                choices: [
+                    { text: "못 본 척 한다. 내 일이 아니다.", next: 'act2_merchant_2_taehyung', stats: { conviction: -2, danger: -1 } },
+                    { text: "몰래 농부에게 경고하고 쌀을 숨기도록 돕는다.", next: 'act2_merchant_2_taehyung', stats: { conviction: +2, danger: +1 } }
+                ]
+            },
+            'act2_merchant_2_taehyung': {
+                text: "가게 앞에서 한 조선인 농부가 쌀을 훔쳤다는 누명을 쓰고 순사에게 끌려가고 있다. 그는 '쌀은 너희가 빼앗아갔잖아!'라고 외치고 있다. 잡혀가면 태형을 당할 것이다.",
+                image: "images/19_merchant_2.png", // images/19_merchant_2.png
+                education: "태형 제도(1912년)는 조선인에게만 적용된 야만적인 형벌로, 1910년대 무단 통치의 상징이었으나 1920년 폐지되었습니다. (이 게임에서는 시대적 압박을 상징합니다.)",
+                choices: [
+                    { text: "'내가 봤다. 그는 훔치지 않았다.'고 증언한다.", next: 'act2_merchant_3_oldwoman', stats: { conviction: +2, honor: +1, danger: +2 } },
+                    { text: "농부의 가족에게 몰래 돈을 쥐여준다.", next: 'act2_merchant_3_oldwoman', stats: { money: -1, conviction: +1 } },
+                    { text: "무서워서 가게 안으로 숨는다.", next: 'act2_merchant_3_oldwoman', stats: { danger: -1, conviction: -1 } }
+                ]
+            },
+            'act2_merchant_3_oldwoman': {
+                text: "단골손님인 조선인 노파가 세금을 못 내 가게 앞에서 순사에게 모욕을 당하고 있다.",
+                image: "images/20_merchant_3.png", // images/20_merchant_3.png
+                education: "일제는 각종 세금을 부과하여 조선인의 부를 수탈했습니다. 세금을 내지 못하면 재산을 압류당하거나 폭력에 시달렸습니다.",
+                choices: [
+                    { text: "가진 돈을 털어 몰래 세금을 대납해준다.", next: 'act2_merchant_4_land', stats: { money: -1, honor: +2, conviction: +1 } },
+                    { text: "일본인 주인의 눈치가 보여 외면한다.", next: 'act2_merchant_4_land', stats: { money: +1, danger: -1, conviction: -2 } }
+                ]
+            },
+            'act2_merchant_4_land': {
+                text: "오래전 토지 조사 사업 때 땅을 잃고 소작농이 된 먼 친척이 찾아왔다. 조선 총독부에 낼 세금 때문에 마지막 남은 송아지를 팔아야 한다며 돈을 빌려달라 한다.",
+                image: "images/21_merchant_4.png", // images/21_merchant_4.png
+                education: "토지 조사 사업(1910~18년)은 '토지 소유권 확립'을 명분으로 했으나, 실제로는 조선 농민의 토지를 빼앗아 동양척식주식회사와 일본인 지주에게 넘기는 수탈 정책이었습니다.",
+                choices: [
+                    { text: "'어려울 때 서로 도와야지.' 월급의 대부분을 빌려준다.", next: 'act3_intro', stats: { money: -2, conviction: +1 } },
+                    // [!!수정!!] 쉼표가 두 개(,,) 들어간 문법 오류 수정
+                    { text: "'우리 가족도 먹고 살기 힘들다.' 모른 척 돌려보낸다.", next: 'act3_intro', stats: { conviction: -2, money: +2 } }
+                ]
+            },
+            // 2막: 유학생 루트
+            'act2_student_1': {
+                text: "어렵게 일본 유학길에 올랐다. 하지만 '조센징'이라 불리며 차별과 멸시를 당한다.",
+                image: "images/22_student_1.png", // images/22_student_1.png
+                education: "비록 차별은 존재했지만, 많은 조선 청년들이 신학문을 배우기 위해 일본으로 유학을 떠났습니다.",
+                choices: [
+                    { text: "공부에만 전념하며 견뎌낸다.", next: 'act2_student_2_march1', stats: { danger: -1, conviction: -1 } },
+                    { text: "조선인 유학생 모임에 가입해 함께 저항한다.", next: 'act2_student_2_march1', stats: { conviction: +2, danger: +1, honor: +1 } }
+                ]
+            },
+            'act2_student_2_march1': {
+                text: "3.1 운동 기념일이다. 조선인 유학생 몇몇이 기숙사에서 몰래 '대한 독립 만세'를 외치고 태극기를 그렸다. 누군가 이 사실을 일본인 학생에게 알린 듯하다.",
+                image: "images/23_student_2.png", // images/23_student_2.png
+                education: "1919년 3.1 운동은 비록 실패했지만, 그 정신은 1920~30년대 학생 운동과 독립 운동가들에게 계속 이어져 항일 의식의 구심점이 되었습니다.",
+                choices: [
+                    { text: "모임에 참여했다. 잡히기 전에 태극기를 숨기고 도망친다.", next: 'act2_student_3_college', stats: { danger: +1 } },
+                    { text: "참여하지 않았지만, 친구들을 위해 '내가 주동자'라고 거짓 자백한다.", next: 'act2_student_3_college', stats: { conviction: +3, danger: +3, honor: +2 } },
+                    { text: "나는 모르는 일이라고 잡아뗀다.", next: 'act2_student_3_college', stats: { conviction: -1 } }
+                ]
+            },
+            'act2_student_3_college': {
+                text: "고향에서 '민립대학 설립운동'이 좌절되었다는 소식이 들려온다. 조선인 동포들이 교육을 위해 모은 성금이 허무하게 쓰였다.",
+                image: "images/24_student_3.png", // images/24_student_3.png
+                education: "민립대학 설립운동(1920년대)은 '우리 손으로 대학을'이라는 구호 아래 전개된 교육 운동이었으나, 일제의 방해와 탄압으로 실패했습니다.",
+                choices: [
+                    { text: "좌절한다. 배움이 무슨 소용인가.", next: 'act2_student_4_letter', stats: { conviction: -1 } },
+                    { text: "언젠가 돌아가 아이들을 가르칠 학교를 세우리라 다짐한다.", next: 'act2_student_4_letter', stats: { conviction: +1, honor: +1 } }
+                ]
+            },
+            'act2_student_4_letter': {
+                text: "대한민국 임시정부에서 활동하는 선배에게서 비밀 편지를 받았다. '일본 내부의 정보를 수집해 조국에 알려달라'는 부탁이다.",
+                image: "images/25_student_4.png", // images/25_student_4.png
+                education: "일본 유학생 중 일부는 '학도병'으로 강제 징집되기도 했지만, 일부는 임시정부와 연계하여 정보 수집 등 비밀스러운 독립운동에 가담하기도 했습니다.",
+                choices: [
+                    { text: "'조국을 위해.' 위험을 무릅쓰고 정보를 수집한다.", next: 'act3_intro', stats: { conviction: +2, danger: +2 } },
+                    { text: "'나는 학생이다.' 편지를 불태우고 학업에만 전념한다.", next: 'act3_intro', stats: { danger: -2, conviction: -2 } }
+                ]
+            },
+            // --- 제 3막: 광복 혹은 침묵 (4개 상황) ---
+            'act3_intro': {
+                text: "제 3막. 광복 혹은 침묵<br><br>1937년, 중일 전쟁이 발발하며 모든 것이 변했다. 일제는 조선을 전쟁의 병참 기지로 삼고, 민족 말살 통치를 더욱 노골적으로 강화하기 시작했다.",
+                image: "images/26_act3_intro.png", // images/26_act3_intro.png
+                education: "중일 전쟁과 태평양 전쟁 시기, 일제는 '국가총동원법'을 선포하고 인적, 물적 자원을 무자비하게 수탈하며 조선 민족을 말살하려 했습니다.",
+                choices: [
+                    { text: "다음으로", next: 'act3_scene1_hwanguk' }
+                ]
+            },
+            'act3_scene1_hwanguk': {
+                text: "매일 아침 황국신민서사를 외워야 한다. 목소리가 작으면 순사나 교사가 달려와 윽박지른다.",
+                image: "images/27_act3_hwanguk.png", // images/27_act3_hwanguk.png
+                education: "황국신민서사는 '우리는 대일본제국의 신민이다'로 시작하는 맹세문으로, 일제가 조선인의 민족의식을 없애고 천황에 대한 충성을 강요하기 위해 암송하게 했습니다.",
+                choices: [
+                    { text: "'나는 대일본제국의 신민이다...' 목소리 높여 외운다.", next: 'act3_scene2_shrine', stats: { conviction: -2, danger: -1, honor: -1 } },
+                    { text: "입만 벙긋거리며 외우는 척한다.", next: 'act3_scene2_shrine', stats: { conviction: -1, danger: +1 } },
+                    { text: "'외울 수 없다!' 침묵으로 저항하다 구타당한다.", next: 'act3_scene2_shrine', stats: { conviction: +3, danger: +2 } }
+                ]
+            },
+            'act3_scene2_shrine': {
+                text: "총동원 주일. 조선 총독부는 모든 조선인을 강제로 신사참배에 동원했다. 모두가 신사 앞에서 억지로 절을 하고 있다.",
+                image: "images/28_act3_shrine.png", // images/28_act3_shrine.png
+                education: "신사참배는 일본의 '신토(神道)' 사원에 절하는 행위로, 일제는 이를 거부하는 기독교 학교를 폐쇄하는 등 민족 종교까지 탄압했습니다.",
+                choices: [
+                    { text: "모두가 보는 앞에서 뻣뻣이 서 있는다.", next: 'act3_scene3_comfort', stats: { conviction: +3, danger: +2, honor: +1 } },
+                    { text: "고개만 살짝 숙이고 눈을 감지 않는다.", next: 'act3_scene3_comfort', stats: { conviction: -1, danger: +1 } },
+                    { text: "눈을 감고 빨리 끝나기를 빌며 절한다.", next: 'act3_scene3_comfort', stats: { danger: -1, conviction: -2, honor: -1 } }
+                ]
+            },
+            'act3_scene3_comfort': {
+                text: "옆집에 살던 16살 '순이'가 공장에 취직시켜 준다는 말에 속아 집을 나선 뒤 소식이 끊겼다. '위안부로 끌려간 것 같다'는 끔찍한 소문이 돈다.",
+                image: "images/29_act3_comfort.png", // images/29_act3_comfort.png
+                education: "일본군 '위안부' : 일제는 전쟁 기간 동안 수많은 조선 여성을 강제로 동원하여 성노예로 삼았습니다. 이는 끔찍한 전쟁 범죄이자 여성 인권 유린입니다.",
+                choices: [
+                    { text: "분노한다. '이 사실을 알리겠다.' 비밀 격문을 만든다.", next: 'act3_scene4_climax', stats: { conviction: +2, danger: +3, honor: +1 } },
+                    { text: "슬퍼한다. 순이의 어머니를 찾아가 위로하고 돈을 건넨다.", next: 'act3_scene4_climax', stats: { money: -1, conviction: +1 } },
+                    { text: "두려워한다. 내 가족을 지키기 위해 집안 문을 걸어 잠근다.", next: 'act3_scene4_climax', stats: { conviction: -2, honor: -2, danger: -1 } }
+                ]
+            },
+            'act3_scene4_climax': {
+                text: "1940년대, 태평양전쟁이 격화된다. 일제는 조선의 젊은이들을 '징용'과 '징병'이라는 이름으로 전쟁터로 끌고 가고 있다.<br><br>{playerName}에게도 소집 영장이 날아왔다.",
+                image: "images/30_act3_climax.png", // images/30_act3_climax.png
+                education: "국가총동원법(1938년) 이후, 일제는 인적·물적 자원을 총동원했습니다. 수많은 조선 청년이 강제로 전쟁터나 탄광으로 끌려가 희생되었습니다.",
+                choices: [
+                    { text: "가족과 함께 깊은 산골로 피신한다.", next: 'calculate_ending', stats: { danger: +1, conviction: -1 } },
+                    { text: "소집에 불응하고, 마지막 저항을 준비한다.", next: 'calculate_ending', stats: { danger: +5, conviction: +5 } },
+                    { text: "시대를 받아들이고, 순응한다.", next: 'calculate_ending', stats: { danger: -1, conviction: -5 } }
+                ]
+            },
+            
+            // --- 엔딩 (3개 공통 + 8개 직업 = 11개) ---
+            
+            // [공통 엔딩 1]
+            'ending_light': {
+                text: "{playerName}은(는) 가장 어두운 시대에 가장 빛나는 선택을 했다.<br><br>수많은 저항과 투쟁 속에서 일제의 총칼에 쓰러지거나, 감옥에서 광복을 맞이했다.<br><br>그의 이야기는 독립 유공자 기록에 남아 후대에 전해졌다.<br><br>100년 후, 누군가 그의 이름을 기록하며 이렇게 말했다.<br>'그는 가장 어두운 시대에 가장 빛나는 선택을 한 영웅이었다.'",
+                image: "images/31_ending_light.png", // images/31_ending_light.png
+                education: "🌺 <b>빛의 이름으로</b><br>당신의 선택은 유관순 열사, 윤봉길 의사처럼 조국의 독립을 위해 모든 것을 바쳤던 수많은 독립운동가들의 정신을 닮았습니다. 그들의 숭고한 희생이 있었기에 지금의 우리가 있습니다.<br><br><b>[수업으로 돌아가기]</b><br>게임 속 {playerName}의 이야기는 여기서 끝나지만, 이 시대를 살았던 실제 인물들의 더 많은 이야기가 수업 속에서 기다리고 있습니다."
+            },
+            // [공통 엔딩 2]
+            'ending_missing': {
+                text: "{playerName}은(는) 행방불명되었다.<br><br>그가 징용에 끌려가다 사라졌는지, 혹은 저항하다 이름 모를 곳에 묻혔는지 아무도 모른다.<br><br>그의 가족들은 광복 후에도 오랫동안 그를 기다렸다.<br><br>100년 후, 한 역사학자가 낡은 징용자 명부에서 그의 이름을 발견하고 이렇게 말했다.<br>'그는 시대의 폭력에 휩쓸려 사라진, 우리가 기억해야 할 이름이다.'",
+                image: "images/36_ending_missing.png", // images/36_ending_missing.png
+                education: "⚰️ <b>사라진 이름</b><br>징용, 징병, 위안부 등으로 끌려가 수많은 조선인들이 이역만리에서 목숨을 잃거나 행방불명되었습니다. 이들의 희생은 우리가 잊지 말아야 할 아픈 역사입니다.<br><br><b>[수업으로 돌아가기]</b><br>게임 속 {playerName}의 이야기는 여기서 끝나지만, 이 시대를 살았던 실제 인물들의 더 많은 이야기가 수업 속에서 기다리고 있습니다."
+            },
+            // [공통 엔딩 3]
+            'ending_silence': {
+                text: "{playerName}은(는) 침묵을 택했다.<br><br>그는 시대의 거대한 흐름에 저항하지 않았고, 그저 순응하며 살아남았다.<br><br>광복이 되었을 때, 그는 기뻐했지만 한편으로는 이름 모를 부끄러움을 느꼈다. 그는 평범하게 늙어갔고, 아무에게도 자신의 젊은 날을 이야기하지 않았다.<br><br>100년 후, 아무도 그의 이름을 기억하지 못했다.<br>'그는 그저 체제에 순응하며 시대를 견뎌낸 침묵의 세대였다.'",
+                image: "images/35_ending_silence.png", // images/35_ending_silence.png
+                education: "🕳️ <b>침묵의 세대</b><br>일제의 탄압이 거세지면서 많은 이들이 저항을 포기하고 침묵을 선택했습니다. 생존을 위한 어쩔 수 없는 선택이었지만, 이 역시 역사의 한 모습입니다. 우리는 이 침묵조차 강요당했던 시대를 기억해야 합니다.<br><br><b>[수업으로 돌아가기]</b><br>게임 속 {playerName}의 이야기는 여기서 끝나지만, 이 시대를 살았던 실제 인물들의 더 많은 이야기가 수업 속에서 기다리고 있습니다."
+            },
+
+            // [신규 엔딩] 직업별 8개
+            'ending_journalist_pro': {
+                text: "{playerName}은(는) 펜의 힘을 믿었다.<br><br>일제의 혹독한 검열 속에서도 그는 진실의 파편들을 모아 기사로 남겼다. 신문사가 폐간된 후에도 그는 항일 격문을 비밀리에 찍어냈다.<br><br>광복 후, 그는 다시 펜을 잡고 언론인으로서 새 조국 건설에 이바지했다.<br><br>100년 후, 누군가 그의 기사를 읽으며 이렇게 말했다.<br>'그는 암흑 속에서도 진실을 기록하려 했던 시대의 파수꾼이었다.'",
+                image: "images/37_ending_journalist_pro.png",
+                education: "✒️ <b>용감한 언론인</b><br>당신의 선택은 일제의 탄압 속에서도 민족의 목소리가 되려 했던 언론인들을 닮았습니다. '동아일보', '조선일보'의 항일 기사와 '신간회' 같은 단체들은 민족의식을 고취하려 노력했습니다.<br><br><b>[수업으로 돌아가기]</b><br>게임 속 {playerName}의 이야기는 여기서 끝나지만, 이 시대를 살았던 실제 인물들의 더 많은 이야기가 수업 속에서 기다리고 있습니다."
+            },
+            'ending_journalist_con': {
+                text: "{playerName}의 펜은 진실을 거슬렀다.<br><br>일제의 명령에 순응하며, 때로는 그들의 정책을 찬양하는 기사를 썼다. 그는 위험에서 벗어났고 풍족한 삶을 살았다.<br><br>광복 후, 그는 '친일파'로 지목되었다. 그는 '살아남기 위한 어쩔 수 없는 선택'이었다고 변명했다.<br><br>100년 후, 누군가 그의 기사를 발견하고 이렇게 말했다.<br>'그의 펜은 시대를 기록했지만, 영혼을 담지는 못했다.'",
+                image: "images/38_ending_journalist_con.png",
+                education: "🍚 <b>생계형 기자</b><br>일제의 탄압이 거세지자, 일부 지식인들은 변절하여 친일의 길을 걸었습니다. 이들은 '내선일체'와 '전쟁 동원'을 찬양하는 글로 민족을 기만했습니다. 이 역시 우리가 기억해야 할 역사의 한 단면입니다.<br><br><b>[수업으로 돌아가기]</b><br>게임 속 {playerName}의 이야기는 여기서 끝나지만, 이 시대를 살았던 실제 인물들의 더 많은 이야기가 수업 속에서 기다리고 있습니다."
+            },
+            'ending_activist_pro': {
+                text: "{playerName}은(는) 독립운동에 모든 것을 바쳤다.<br><br>비밀 회합을 주선하고, 군자금을 모으고, 때로는 의거를 준비하며 조국의 독립만을 생각했다.<br><br>수많은 동지들을 잃고, 수배와 투옥을 반복했지만 그의 신념은 꺾이지 않았다.<br><br>광복 후, 그는 백발이 되어 고향 땅을 밟았다.<br><br>100년 후, 누군가 그의 이름을 부르며 이렇게 말했다.<br>'그는 자신의 삶을 조국의 역사로 만든 진정한 독립운동가였다.'",
+                image: "images/39_ending_activist_pro.png",
+                education: "✊ <b>굳건한 독립운동가</b><br>당신의 선택은 김구, 안중근 등 수많은 독립운동가들의 굳건한 의지를 닮았습니다. 이들은 만주, 상하이, 그리고 국내에서 목숨을 걸고 항일 투쟁을 이어갔습니다.<br><br><b>[수업으로 돌아가기]</b><br>게임 속 {playerName}의 이야기는 여기서 끝나지만, 이 시대를 살았던 실제 인물들의 더 많은 이야기가 수업 속에서 기다리고 있습니다."
+            },
+            'ending_activist_con': {
+                text: "{playerName}은(는) 결국 무너졌다.<br><br>독립운동에 투신했지만, 계속되는 가난과 일제의 끔찍한 고문, 동료의 배신은 그의 신념을 꺾었다.<br><br>그는 결국 밀정이 되어 동지들을 팔아넘기고 자신의 안위를 보장받았다.<br><br>광복 후, 그는 '배신자'로 낙인찍혀 평생을 숨어 살았다.<br><br>100년 후, 누군가 그의 기록을 보며 이렇게 말했다.<br>'그는 영웅이 될 수도 있었지만, 시대의 무게를 견디지 못한 배신자였다.'",
+                image: "images/40_ending_activist_con.png",
+                education: "🤥 <b>변절한 운동가</b><br>숭고한 뜻으로 독립운동을 시작했으나, 일제의 잔혹한 탄압과 회유에 못 이겨 변절한 이들도 있었습니다. 이는 독립운동 내부의 가장 아픈 상처 중 하나였습니다.<br><br><b>[수업으로 돌아가기]</b><br>게임 속 {playerName}의 이야기는 여기서 끝나지만, 이 시대를 살았던 실제 인물들의 더 많은 이야기가 수업 속에서 기다리고 있습니다."
+            },
+            'ending_merchant_pro': {
+                text: "{playerName}은(는) 공생을 택했다.<br><br>그는 일제에 순응하지 않고, 자신만의 방식으로 이웃을 도왔다. 굶주린 이에게 쌀을 나눠주고, 쫓기는 독립운동가를 숨겨주었다.<br><br>그의 이름은 역사책에 남지 않았지만, 그가 지켜낸 가족과 이웃들의 기억 속에 남았다.<br><br>100년 후, 그의 후손이 낡은 사진을 보며 이렇게 말했다.<br>'그는 평범했지만, 자신만의 방식으로 시대를 이겨낸 위대한 생존자였다.'",
+                image: "images/41_ending_merchant_pro.png",
+                education: "💰 <b>의로운 상인</b><br>모든 사람이 독립운동에 투신할 수는 없었습니다. 많은 조선인들은 생존을 택했고, 그 속에서 가족과 공동체를 지키려 노력했습니다. 이들의 소극적인 저항과 도움 역시 독립의 밑거름이 되었습니다.<br><br><b>[수업으로 돌아가기]</b><br>게임 속 {playerName}의 이야기는 여기서 끝나지만, 이 시대를 살았던 실제 인물들의 더 많은 이야기가 수업 속에서 기다리고 있습니다."
+            },
+            'ending_merchant_con': {
+                text: "{playerName}은(는) 철저히 자신의 이익을 좇았다.<br><br>그는 일제에 협력하며 부를 쌓았다. 일본군에 물자를 대고, 조선인들의 고혈을 짜내며 거상이 되었다.<br><br>그는 굶주린 이웃을 외면했고, 독립운동을 '뜬구름 잡는 소리'라 비웃었다.<br><br>광복 후, 그는 재산을 지키기 위해 또 다른 권력에 붙었다.<br><br>100년 후, 누군가 그의 초상화를 보며 이렇게 말했다.<br>'그는 시대를 이용해 부를 얻었지만, 민족을 잃었다.'",
+                image: "images/42_ending_merchant_con.png",
+                education: "🤑 <b>부를 좇은 상인</b><br>일제에 적극적으로 협력하여 부를 축적한 친일 자본가들도 있었습니다. 이들은 민족의 고통을 외면하고, 전쟁에 협력하는 대가로 자신들의 배를 불렸습니다.<br><br><b>[수업으로 돌아가기]</b><br>게임 속 {playerName}의 이야기는 여기서 끝나지만, 이 시대를 살았던 실제 인물들의 더 많은 이야기가 수업 속에서 기다리고 있습니다."
+            },
+            'ending_student_pro': {
+                text: "{playerName}은(는) 배움의 길을 걸었다.<br><br>일제의 차별 속에서도 지식을 쌓았고, 유학생 모임을 주도하며 민족의식을 잃지 않았다. 때로는 임시정부의 비밀 요원으로 활동하기도 했다.<br><br>광복 후, 그는 고향으로 돌아와 작은 학교를 세웠다. 그는 아이들에게 한글과 역사를 가르치며 조국의 꿈을 키워냈다.<br><br>100년 후, 그가 세운 학교에서 아이들이 뛰놀며 이렇게 말했다.<br>'그는 배움을 통해 미래의 씨앗을 심은 선구자였다.'",
+                image: "images/43_ending_student_pro.png",
+                education: "🎓 <b>조국을 밝힌 유학생</b><br>당신의 선택은 '민립대학 설립운동'이나 '브나로드 운동(농촌 계몽 운동)'에 참여했던 지식인들의 열망을 닮았습니다. 이들은 교육과 문화가 곧 독립의 힘이라 믿었습니다.<br><br><b>[수업으로 돌아가기]</b><br>게임 속 {playerName}의 이야기는 여기서 끝나지만, 이 시대를 살았던 실제 인물들의 더 많은 이야기가 수업 속에서 기다리고 있습니다."
+            },
+            'ending_student_con': {
+                text: "{playerName}은(는) 배움을 통해 출세를 택했다.<br><br>그는 '조센징'이라는 멸시를 딛고 일본인보다 더 유창한 일본어를 구사하려 애썼다. 그는 유학생 모임을 멀리하고, 일본 제국의 엘리트가 되려 했다.<br><br>광복 후, 그는 조선 총독부에서 일했던 이력 때문에 고향에 돌아오지 못하고 이방인으로 늙어갔다.<br><br>100년 후, 누군가 그의 졸업장을 보며 이렇게 말했다.<br>'그는 많은 것을 배웠지만, 정작 자신을 잃어버렸다.'",
+                image: "images/44_ending_student_con.png",
+                education: "⛵ <b>나라를 등진 유학생</b><br>일부 유학생들은 신분 상승의 욕구로 자발적 '황국신민'이 되기를 택했습니다. 이들은 조선의 현실을 외면하고 일본 제국의 일원이 되어 민족을 배반하는 글을 쓰기도 했습니다.<br><br><b>[수업으로 돌아가기]</b><br>게임 속 {playerName}의 이야기는 여기서 끝나지만, 이 시대를 살았던 실제 인물들의 더 많은 이야기가 수업 속에서 기다리고 있습니다."
+            }
+        };
+     
+
+        // --- 4. 핵심 게임 로직 함수 ---
+
+        // [추가] 점수 알림 팝업 함수
+        function showStatPopup(stats) {
+            let message = "";
+            for (const stat in stats) {
+                const value = stats[stat];
+                if (value === 0) continue;
+                
+                const statName = getStatName(stat);
+                const sign = value > 0 ? '+' : '';
+                // [수정] 팝업 색상 변경
+                const colorClass = value > 0 ? 'text-green-300' : 'text-red-300';
+                
+                message += `<span class="inline-block mr-3 ${colorClass}">${statName} ${sign}${value}</span>`;
+            }
+
+            if (message === "") return; // 변동 없으면 표시 안 함
+
+            statPopup.innerHTML = message;
+            statPopup.style.display = 'block';
+            statPopup.style.opacity = '1';
+            statPopup.style.transform = 'translate(-50%, 0)';
+
+            // 2.5초 후에 사라짐
+            setTimeout(() => {
+                statPopup.style.opacity = '0';
+                statPopup.style.transform = 'translate(-50%, 20px)';
+                setTimeout(() => {
+                    statPopup.style.display = 'none';
+                }, 500); // transition 시간
+            }, 2500);
+        }
+
+        // 게임 시작 (이름 입력 후)
+        function startGame() {
+            const bgm = document.getElementById('bgm');
+            bgm.play().catch(err => console.log("자동재생 차단됨:", err));
+            playerStats.playerName = playerNameInput.value || "청년";
+            startScreen.style.opacity = '0';
+            setTimeout(() => {
+                startScreen.style.display = 'none';
+                gameWindow.style.opacity = '1';
+            }, 500);
+            updateStatsDisplay();
+            renderScene('intro');
+        }
+
+
+
+        // 스탯 UI 업데이트
+        function updateStatsDisplay() {
+            statsBar.innerHTML = ''; // 초기화
+            const statsToShow = [
+                { key: 'playerName', label: '👤', value: playerStats.playerName },
+                { key: 'money', label: '💰', value: playerStats.money },
+                { key: 'conviction', label: '🕊️', value: playerStats.conviction },
+                { key: 'danger', label: '🔥', value: playerStats.danger },
+                { key: 'honor', label: '🎖️', value: playerStats.honor }
+            ];
+            
+            statsToShow.forEach(stat => {
+                const text = (stat.key === 'playerName') ? 
+                    `${stat.label} ${stat.value}` : 
+                    `${stat.label} ${getStatName(stat.key)}: ${stat.value}`;
+                
+                statsBar.innerHTML += `<span class="stat-item">${text}</span>`;
+            });
+        }
+        
+        // 스탯 키를 한글 이름으로
+        function getStatName(key) {
+            switch(key) {
+                case 'money': return '돈';
+                case 'conviction': return '신념';
+                case 'danger': return '위험';
+                case 'honor': return '명예';
+                default: return key;
+            }
+        }
+
+
+        // 장면 렌더링
+        function renderScene(sceneId) {
+            window.scrollTo(0, 0); // 화면 상단으로 스크롤
+            const scene = gameData[sceneId];
+            if (!scene) {
+                console.error(`'${sceneId}' 장면을 찾을 수 없습니다. gameData를 확인해주세요.`);
+                sceneText.innerHTML = `오류: '${sceneId}' 장면 데이터를 찾을 수 없습니다.<br>게임 데이터를 확인해주세요.`;
+                choicesContainer.innerHTML = ''; // 오류 시 선택지 비우기
+                return;
+            }
+
+            // 장면 전환 효과
+            gameWindow.classList.remove('scene-fade-in');
+            void gameWindow.offsetWidth; // 리플로우 강제
+            gameWindow.classList.add('scene-fade-in');
+
+            sceneText.innerHTML = scene.text.replace(/{playerName}/g, playerStats.playerName);
+            
+            if (scene.image) {
+                sceneImage.src = scene.image;
+                sceneImage.alt = scene.text.substring(0, 30); // alt 텍스트
+                sceneImage.onerror = function() {
+                    // 이미지 로드 실패 시 대체 텍스트가 있는 플레이스홀더 표시
+                    this.src = `https://placehold.co/600x600/6b7280/ffffff?text=Image+Not+Found`;
+                };
+            }
+
+            if (scene.education) {
+                educationText.innerHTML = scene.education.replace(/{playerName}/g, playerStats.playerName);
+                educationBox.style.display = 'block';
+            } else {
+                educationBox.style.display = 'none';
+            }
+
+            choicesContainer.innerHTML = '';
+            endingFooter.style.display = 'none';
+            
+            if (scene.choices) {
+                scene.choices.forEach((choice, index) => {
+                    const button = document.createElement('button');
+                    button.innerHTML = choice.text.replace(/{playerName}/g, playerStats.playerName);
+                    button.className = 'w-full p-4 mb-3 text-left bg-gray-800 text-white rounded-lg shadow-md transition-all duration-300 hover:bg-indigo-700 hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-opacity-50';
+                    button.onclick = () => handleChoice(choice, scene.isInitial || false);
+                    choicesContainer.appendChild(button);
+                });
+            }
+
+            // 엔딩 장면일 경우
+            if (sceneId.startsWith('ending_')) {
+                const restartButton = document.createElement('button');
+                restartButton.innerHTML = '처음부터 다시 시작하기';
+                restartButton.className = 'w-full p-4 mb-3 text-left bg-indigo-600 text-white rounded-lg shadow-md transition-all duration-300 hover:bg-indigo-700 hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-opacity-50 font-bold text-center';
+                restartButton.onclick = () => window.location.reload();
+                choicesContainer.appendChild(restartButton);
+
+                endingFooter.style.display = 'block'; // 엔딩일 때만 푸터 표시
+            }
+        }
+
+        // 선택지 처리
+        function handleChoice(choice, isInitial = false) {
+            // [추가] 팝업 알림
+            if (choice.stats) {
+                showStatPopup(choice.stats);
+            }
+
+            if (choice.stats) {
+                if (isInitial) {
+                    // '출신 배경' 선택 시: 스탯을 덮어씀
+                    const baseStats = { money: 0, conviction: 0, danger: 0, honor: 0, playerName: playerStats.playerName };
+                    playerStats = { ...baseStats, ...choice.stats };
+                } else {
+                    // 일반 선택 시: 스탯을 누적
+                    for (const stat in choice.stats) {
+                        if (playerStats.hasOwnProperty(stat)) {
+                            playerStats[stat] += choice.stats[stat];
+                        }
+                    }
+                }
+            }
+            
+            updateStatsDisplay();
+
+            // [!!수정!!] 2막 직업 선택 시 'playerJob' 변수에 저장
+            if (currentScene === 'act2_intro') {
+                if (choice.next === 'act2_journalist_1') playerJob = 'journalist';
+                else if (choice.next === 'act2_activist_1') playerJob = 'activist';
+                else if (choice.next === 'act2_merchant_1') playerJob = 'merchant';
+                else if (choice.next === 'act2_student_1') playerJob = 'student';
+                console.log("직업 선택:", playerJob); // 디버깅용 로그
+            }
+
+            if (choice.next === 'calculate_ending') {
+                // 엔딩 계산 전 딜레이 (팝업 보여주기)
+                setTimeout(calculateEnding, 1000);
+            } else if (choice.next) {
+                currentScene = choice.next;
+                // 팝업이 보이는 동안 잠시 기다렸다가 장면 전환
+                setTimeout(() => {
+                    renderScene(currentScene);
+                }, 1000); // 1초 딜레이
+            }
+        }
+
+        // [!!수정!!] 엔딩 계산 로직 수정
+        function calculateEnding() {
+            
+            const { conviction, danger, honor } = playerStats;
+            console.log("엔딩 계산 시작:", playerStats, "직업:", playerJob); // 디버깅용 로그
+
+            // [공통 엔딩 1] 사라진 이름
+            // (수정) 기준값 조정: 신념 10 이상, 위험 15 이상, 명예 5 이하
+            if (conviction >= 25 && danger >= 25 && honor <= 5) { 
+                renderScene('ending_missing');
+                return;
+            }
+
+            // [공통 엔딩 2] 빛의 이름으로
+            // (수정) 기준값 조정: 신념 15 이상, 위험 15 이상, 명예 6 이상
+            if (conviction >= 25 && danger >= 25 && honor >= 6) {
+                renderScene('ending_light');
+                return;
+            }
+
+            // [공통 엔딩 3] 침묵 (신념이 매우 낮음)
+            // (수정) 기준값 조정: 신념 -5 이하
+            if (conviction <= -10) {
+                renderScene('ending_silence');
+                return;
+            }
+
+            // [직업별 엔딩] 공통 엔딩에 해당하지 않을 경우
+            // '신념' 수치를 기준으로 항일/친일 분기 (기준값: +10)
+            const isProKorea = conviction >= 10; // 신념이 10이상이면 긍정적 엔딩
+
+            switch (playerJob) {
+                case 'journalist':
+                    renderScene(isProKorea ? 'ending_journalist_pro' : 'ending_journalist_con');
+                    break;
+                case 'activist':
+                    // 독립운동가 루트는 '친일'이 '변절'을 의미
+                    renderScene(isProKorea ? 'ending_activist_pro' : 'ending_activist_con');
+                    break;
+                case 'merchant':
+                    renderScene(isProKorea ? 'ending_merchant_pro' : 'ending_merchant_con');
+                    break;
+                case 'student':
+                    renderScene(isProKorea ? 'ending_student_pro' : 'ending_student_con');
+                    break;
+                default:
+                    // 2막에서 직업을 선택하지 못하는 버그가 있을 경우 (Failsafe)
+                    console.error("playerJob이 설정되지 않았습니다. 기본 엔딩(침묵)을 표시합니다.");
+                    renderScene('ending_silence');
+            }
+        }
+        
+
+// --- 6. 게임 초기화 ---
+        window.onload = () => {
+            // [추가] 튜토리얼 -> 이름입력 -> 게임시작 순서
+            showStartScreenBtn.onclick = () => {
+                tutorialScreen.style.opacity = '0';
+                startScreen.style.display = 'flex';
+                setTimeout(() => {
+                    tutorialScreen.style.display = 'none';
+                    startScreen.style.opacity = '1';
+                }, 500);
+            };
+
+            startGameBtn.onclick = startGame;
+            
+            playerNameInput.addEventListener('keyup', (event) => {
+                if (event.key === 'Enter') {
+                    startGame();
+                }
+            });
+
+
+            // 페이지 로드 시 튜토리얼 화면 바로 표시
+            tutorialScreen.style.display = 'flex';
+            setTimeout(() => { tutorialScreen.style.opacity = '1'; }, 100); // 부드러운 등장을 위해
+        };
+    </script>
+    <audio id="bgm" src="https://So0yeon.github.io/Cchoice-1930/audio/bgm.mp3" loop></audio>
+
+</body>
+</html>
+
+
+
+
+
+
